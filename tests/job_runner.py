@@ -1,4 +1,5 @@
 import requests
+import time
 from configparser import ConfigParser
 
 
@@ -81,6 +82,37 @@ class JobRunner():
     self.job_id = requests.post(endpoint, headers=self.headers, json=self.job_config).json()['run_id']
 
     return self.job_id
+
+
+  def run_job(self):
+
+    job_id = self.run()
+    print(f"Running job with id: {job_id}")
+
+    running_state = True
+    successful_run = False
+    results = None
+
+    while running_state:
+        job_state = self.status['life_cycle_state']
+        
+        if job_state in ["PENDING", "RUNNING"]:
+            print(f"Job running in {job_state} state")
+            time.sleep(5)
+
+        elif job_state in ["TERMINATED", "TERMINATING"] and self.status.get('result_state', None) == "SUCCESS":
+            successful_run = True
+            results = self.results
+            print("Job completed successfully")
+            running_state = False
+
+        else:
+            print(f"Job failed with {job_state} state")
+            running_state = False
+
+    job_results = self.results
+    job_results['successful_run'] = successful_run
+    return (job_results)
 
 
   @property
